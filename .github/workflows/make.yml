@@ -33,5 +33,7 @@ jobs:
     - name: Build
       shell: bash
       run: |
-        sudo bash -c 'apt-get update; apt-get install -y lazarus'
-        instantfpc '-Fu/usr/lib64/lazarus/components/lazutils/' .github/workflows/make.pas
+        sudo bash -c 'apt-get update; apt-get install -y lazarus' >/dev/null
+        read -r < <(sudo find /usr -name 'lazutils')
+        echo "${REPLY}"
+        instantfpc "-Fu${REPLY}" .github/workflows/make.pas

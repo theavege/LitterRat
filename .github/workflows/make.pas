@@ -6,34 +6,60 @@ uses
   SysUtils,
   StrUtils,
   FileUtil,
+  fphttpclient,
+  openssl,
+  opensslsockets,
   Process;
 
 const
-  Source = 'src';
+  Src = 'src';
+  Use = 'use';
 
 var
+  Client: TFPHttpClient;
   Output, Line, LPI: ansistring;
-  Projects: TStringList;
-  Project: String;
+  Files: TStringList;
+  Each: String;
 
 begin
   if FileExists('.gitmodules') then
     if RunCommand('git', ['submodule', 'update', '--init', '--recursive',
       '--force', '--remote'], Output) then
-      Writeln(Output);
-  Projects := FindAllFiles(Source, '*.lpi', True);
+      Writeln(#27'[32m', Output, #27'[0m')
+    else
+      Writeln(#27'[31m', Output, #27'[0m');
+  Files := FindAllFiles(Use, '*.lpk', True);
   try
-    for Project in Projects do
+    for Each in Files do
+      if RunCommand('lazbuild', ['--add-package-link', Each], Output) then
+        Writeln(#27'[32m', 'added ', Each, #27'[0m')
+      else
+        Writeln(#27'[31m', 'added ', Each, #27'[0m');
+  finally
+    Files.Free;
+  end;
+  Files := FindAllFiles(Src, '*.lpi', True);
+  try
+    for Each in Files do
+      Writeln(#27'[33m', 'build ', Each, #27'[0m');
       if RunCommand('lazbuild', ['--build-all', '--recursive',
-        '--no-write-project', Project], Output) then
+        '--no-write-project', Each], Output) then
       begin
-        for Line in SplitString(Output, #10) do
+        for Line in SplitString(Output, LineEnding) do
         begin
           if Pos('Linking', Line) <> 0 then
-            writeln(Line);
+            Writeln(#27'[32m', Line, #27'[0m');
+        end;
+      end
+      else
+      begin
+        for Line in SplitString(Output, LineEnding) do
+        begin
+          if Pos('Fatal', Line) <> 0 and Pos('Error', Line) then
+            Writeln(#27'[31m', Line, #27'[0m');
         end;
       end;
   finally
-    Projects.Free;
+    Files.Free;
   end;
 end.
